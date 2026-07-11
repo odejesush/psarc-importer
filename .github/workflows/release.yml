@@ -40,11 +40,35 @@ jobs:
           -o publish/linux-x64
           /p:NuGetAudit=false
 
+      - name: Publish macOS Intel
+        run: >
+          dotnet publish src/PsarcImporter/PsarcImporter.csproj
+          -c Release
+          -r osx-x64
+          --self-contained
+          -o publish/osx-x64
+          /p:NuGetAudit=false
+
+      - name: Publish macOS Apple Silicon
+        run: >
+          dotnet publish src/PsarcImporter/PsarcImporter.csproj
+          -c Release
+          -r osx-arm64
+          --self-contained
+          -o publish/osx-arm64
+          /p:NuGetAudit=false
+
       - name: Zip Windows
         run: 7z a publish/PsarcImporter-win-x64.zip ./publish/win-x64/*
 
       - name: Zip Linux
         run: 7z a publish/PsarcImporter-linux-x64.zip ./publish/linux-x64/*
+
+      - name: Zip macOS Intel
+        run: 7z a publish/PsarcImporter-osx-x64.zip ./publish/osx-x64/*
+
+      - name: Zip macOS Apple Silicon
+        run: 7z a publish/PsarcImporter-osx-arm64.zip ./publish/osx-arm64/*
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -52,3 +76,5 @@ jobs:
           files: |
             publish/PsarcImporter-win-x64.zip
             publish/PsarcImporter-linux-x64.zip
+            publish/PsarcImporter-osx-x64.zip
+            publish/PsarcImporter-osx-arm64.zip
