@@ -36,7 +36,8 @@ jobs:
           reportgenerator \
             -reports:./coverage/**/coverage.cobertura.xml \
             -targetdir:./coverage/report \
-            -reporttypes:MarkdownSummaryGithub
+            -reporttypes:MarkdownSummaryGithub \
+            -assemblyfilters:+PsarcImporter
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
