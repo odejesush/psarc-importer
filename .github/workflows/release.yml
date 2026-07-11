@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish
+        run: >
+          dotnet publish src/PsarcImporter/PsarcImporter.csproj
+          -c Release
+          -r win-x64
+          --self-contained
+          -o publish/win-x64
+          /p:NuGetAudit=false
+
+      - name: Zip output
+        run: |
+          cd publish/win-x64
+          7z a ../PsarcImporter-win-x64.zip .
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/PsarcImporter-win-x64.zip
