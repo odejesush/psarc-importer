@@ -22,7 +22,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Publish
+      - name: Publish Windows
         run: >
           dotnet publish src/PsarcImporter/PsarcImporter.csproj
           -c Release
@@ -31,12 +31,24 @@ jobs:
           -o publish/win-x64
           /p:NuGetAudit=false
 
-      - name: Zip output
-        run: |
-          cd publish/win-x64
-          7z a ../PsarcImporter-win-x64.zip .
+      - name: Publish Linux
+        run: >
+          dotnet publish src/PsarcImporter/PsarcImporter.csproj
+          -c Release
+          -r linux-x64
+          --self-contained
+          -o publish/linux-x64
+          /p:NuGetAudit=false
+
+      - name: Zip Windows
+        run: 7z a publish/PsarcImporter-win-x64.zip ./publish/win-x64/*
+
+      - name: Zip Linux
+        run: 7z a publish/PsarcImporter-linux-x64.zip ./publish/linux-x64/*
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: publish/PsarcImporter-win-x64.zip
+          files: |
+            publish/PsarcImporter-win-x64.zip
+            publish/PsarcImporter-linux-x64.zip
