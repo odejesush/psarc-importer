@@ -1,0 +1,3 @@
+[submodule "lib/Rocksmith2014.NET"]
+	path = lib/Rocksmith2014.NET
+	url = https://github.com/iminashi/Rocksmith2014.NET
