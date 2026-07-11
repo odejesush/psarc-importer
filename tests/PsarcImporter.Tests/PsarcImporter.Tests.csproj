@@ -22,4 +22,19 @@
     <ProjectReference Include="..\..\lib\Rocksmith2014.NET\src\Rocksmith2014.XML\Rocksmith2014.XML.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\lib\Rocksmith2014.NET\tests\Rocksmith2014.IntegrationTests\psarc\test_p.psarc"
+          Link="Fixtures\test_p.psarc"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\lib\Rocksmith2014.NET\tests\Rocksmith2014.IntegrationTests\project\arr_lead_RS2.xml"
+          Link="Fixtures\arr_lead_RS2.xml"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\lib\Rocksmith2014.NET\tests\Rocksmith2014.IntegrationTests\project\arr_bass_RS2.xml"
+          Link="Fixtures\arr_bass_RS2.xml"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\lib\Rocksmith2014.NET\tests\Rocksmith2014.IntegrationTests\project\cover.png"
+          Link="Fixtures\cover.png"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
