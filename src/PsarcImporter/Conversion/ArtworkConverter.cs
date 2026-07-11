@@ -105,7 +105,7 @@ internal static class ArtworkConverter
         }
     }
 
-    private static void WriteRgbaPng(string path, int width, int height, byte[] rgbaPixels)
+    internal static void WriteRgbaPng(string path, int width, int height, byte[] rgbaPixels)
     {
         using FileStream output = File.Create(path);
         output.Write(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });

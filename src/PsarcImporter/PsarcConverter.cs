@@ -387,7 +387,7 @@ internal static class PsarcConverter
             audioEntryDir: "audio");
     }
 
-    private static string SanitizeFileName(string value)
+    internal static string SanitizeFileName(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return "arrangement";

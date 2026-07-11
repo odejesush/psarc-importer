@@ -71,7 +71,7 @@ internal static class TheoryPackageWriter
         }
     }
 
-    private static string SanitizeEntryName(string value)
+    internal static string SanitizeEntryName(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return "arrangement";
