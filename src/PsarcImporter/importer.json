@@ -1,0 +1,34 @@
+{
+  "id": "psarc-importer",
+  "displayName": "PSARC Importer",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "enabled": true,
+  "priority": 100,
+  "extensions": [".psarc"],
+  "folderSignatures": [
+    {
+      "id": "unpacked-psarc",
+      "displayName": "Unpacked PSARC",
+      "recursive": false,
+      "requiredFiles": ["song.rs2song.json"]
+    }
+  ],
+  "entrypoints": [
+    {
+      "runtimeIdentifier": "win-x64",
+      "path": "PsarcImporter.exe",
+      "arguments": "--source {sourcePath} --output {outputTheoryPath} --work {workDirectory}"
+    },
+    {
+      "runtimeIdentifier": "osx-x64",
+      "path": "PsarcImporter",
+      "arguments": "--source {sourcePath} --output {outputTheoryPath} --work {workDirectory}"
+    },
+    {
+      "runtimeIdentifier": "osx-arm64",
+      "path": "PsarcImporter",
+      "arguments": "--source {sourcePath} --output {outputTheoryPath} --work {workDirectory}"
+    }
+  ]
+}
