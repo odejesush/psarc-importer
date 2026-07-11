@@ -7,7 +7,52 @@ on:
     branches: [main, master]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run tests with coverage
+        run: >
+          dotnet test tests/PsarcImporter.Tests/PsarcImporter.Tests.csproj
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage
+          /p:NuGetAudit=false
+
+      - name: Generate coverage report
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:./coverage/**/coverage.cobertura.xml \
+            -targetdir:./coverage/report \
+            -reporttypes:MarkdownSummaryGithub \
+            -assemblyfilters:+PsarcImporter
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage/report/
+
+      - name: Add coverage comment to PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ./coverage/report/SummaryGithub.md
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

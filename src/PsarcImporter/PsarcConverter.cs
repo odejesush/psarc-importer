@@ -387,15 +387,16 @@ internal static class PsarcConverter
             audioEntryDir: "audio");
     }
 
-    private static string SanitizeFileName(string value)
+    private static readonly char[] InvalidFileNameChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+
+    internal static string SanitizeFileName(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return "arrangement";
-        char[] invalid = Path.GetInvalidFileNameChars();
         char[] chars = value.ToCharArray();
         for (int i = 0; i < chars.Length; i++)
         {
-            if (System.Array.IndexOf(invalid, chars[i]) >= 0 || chars[i] == '/' || chars[i] == '\\')
+            if (chars[i] < 0x20 || System.Array.IndexOf(InvalidFileNameChars, chars[i]) >= 0)
                 chars[i] = '_';
         }
         string result = new string(chars).Trim('_', '.', ' ');
