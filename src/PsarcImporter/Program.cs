@@ -1,3 +1,8 @@
+using System.IO.Compression;
+using System.Text.Json;
+
+namespace PsarcImporter;
+
 internal static class Program
 {
     public static async Task<int> Main(string[] args)
@@ -6,6 +11,7 @@ internal static class Program
         string? sourcePath = null;
         string? outputPath = null;
         string? workDirectory = null;
+        bool force = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -15,18 +21,20 @@ internal static class Program
                 outputPath = args[++i];
             else if (string.Equals(args[i], "--work", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 workDirectory = args[++i];
+            else if (string.Equals(args[i], "--force", StringComparison.OrdinalIgnoreCase))
+                force = true;
         }
 
         if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(outputPath))
         {
-            Console.Error.WriteLine("Usage: PsarcImporter --source <psarcPath|sourceDir> --output <outputTheoryPath|outputDir> [--work <workDir>]");
+            Console.Error.WriteLine("Usage: PsarcImporter --source <psarcPath|sourceDir> --output <outputTheoryPath|outputDir> [--work <workDir>] [--force]");
             return 2;
         }
 
         string fullPath = Path.GetFullPath(sourcePath);
 
         if (Directory.Exists(fullPath))
-            return await RunBatch(fullPath, Path.GetFullPath(outputPath), workDirectory);
+            return await RunBatch(fullPath, Path.GetFullPath(outputPath), workDirectory, force);
         else
             return await RunSingle(fullPath, Path.GetFullPath(outputPath), workDirectory);
     }
@@ -63,7 +71,7 @@ internal static class Program
         }
     }
 
-    private static async Task<int> RunBatch(string sourceDir, string outputDir, string? workDirectory)
+    private static async Task<int> RunBatch(string sourceDir, string outputDir, string? workDirectory, bool force)
     {
         Directory.CreateDirectory(outputDir);
 
@@ -80,9 +88,15 @@ internal static class Program
 
         Console.WriteLine($"[PsarcImporter] Found {psarcFiles.Length} .psarc file(s) in {sourceDir}");
 
+        // Build set of existing songs from output directory metadata
+        var existingSongs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!force)
+            existingSongs = LoadExistingSongMetadata(outputDir);
+
         int succeeded = 0;
         int failed = 0;
         int skipped = 0;
+        var failedFiles = new List<(string File, string Error)>();
 
         foreach (string psarcPath in psarcFiles)
         {
@@ -95,6 +109,14 @@ internal static class Program
                 var (title, artist) = await PsarcImporter.PsarcConverter.ConvertAsync(
                     psarcPath, tempOutputPath, fileWorkDir);
 
+                // Check for duplicates by metadata
+                if (!force && existingSongs.Contains(GetSongKey(title, artist)))
+                {
+                    Console.WriteLine($"[PsarcImporter] Skipping '{title}' by '{artist}' (already in output)");
+                    skipped++;
+                    continue;
+                }
+
                 string sanitizedTitle = PsarcImporter.PsarcConverter.SanitizeFileName(title);
                 string sanitizedArtist = PsarcImporter.PsarcConverter.SanitizeFileName(artist);
                 string fileName = string.IsNullOrWhiteSpace(artist)
@@ -104,19 +126,21 @@ internal static class Program
 
                 if (File.Exists(finalPath))
                 {
-                    Console.WriteLine($"[PsarcImporter] Skipping '{title}' (already exists)");
+                    Console.WriteLine($"[PsarcImporter] Skipping '{title}' (file already exists)");
                     skipped++;
                 }
                 else
                 {
                     File.Move(tempOutputPath, finalPath);
-                    Console.WriteLine($"[PsarcImporter] Imported '{title}' -> {finalPath}");
+                    Console.WriteLine($"[PsarcImporter] Imported '{title}' -> {fileName}");
                     succeeded++;
                 }
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[PsarcImporter] Failed to import '{Path.GetFileName(psarcPath)}': {ex.Message}");
+                string error = ex.InnerException?.Message ?? ex.Message;
+                Console.Error.WriteLine($"[PsarcImporter] Failed to import '{Path.GetFileName(psarcPath)}': {error}");
+                failedFiles.Add((Path.GetFileName(psarcPath), error));
                 failed++;
             }
             finally
@@ -132,7 +156,51 @@ internal static class Program
             }
         }
 
+        // Print summary
         Console.WriteLine($"[PsarcImporter] Done: {succeeded} imported, {skipped} skipped, {failed} failed");
+
+        if (failedFiles.Count > 0)
+        {
+            Console.Error.WriteLine($"[PsarcImporter] Failed files:");
+            foreach (var (file, error) in failedFiles)
+                Console.Error.WriteLine($"  - {file}: {error}");
+        }
+
         return failed > 0 ? 1 : 0;
+    }
+
+    private static HashSet<string> LoadExistingSongMetadata(string outputDir)
+    {
+        var songs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string[] theoryFiles = Directory.GetFiles(outputDir, "*.theory", SearchOption.TopDirectoryOnly);
+
+        foreach (string theoryPath in theoryFiles)
+        {
+            try
+            {
+                using var stream = File.OpenRead(theoryPath);
+                using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+                var manifestEntry = archive.GetEntry("manifest.json");
+                if (manifestEntry == null) continue;
+
+                using var manifestStream = manifestEntry.Open();
+                var manifest = JsonSerializer.Deserialize<TheorySongManifest>(manifestStream,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (manifest != null)
+                    songs.Add(GetSongKey(manifest.title, manifest.artist));
+            }
+            catch
+            {
+                // Skip files that can't be read
+            }
+        }
+
+        return songs;
+    }
+
+    private static string GetSongKey(string title, string artist)
+    {
+        return $"{title.Trim()}|{artist.Trim()}";
     }
 }
