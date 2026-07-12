@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="PsarcImporter.Tests" />
+    <InternalsVisibleTo Include="PsarcImporter.Gui" />
   </ItemGroup>
 
   <ItemGroup>
