@@ -9,7 +9,7 @@ namespace PsarcImporter;
 
 internal static class PsarcConverter
 {
-    public static async Task ConvertAsync(string psarcPath, string outputPath, string workDirectory)
+    public static async Task<(string Title, string Artist)> ConvertAsync(string psarcPath, string outputPath, string workDirectory)
     {
         if (!File.Exists(psarcPath))
             throw new FileNotFoundException("PSARC file not found.", psarcPath);
@@ -92,6 +92,8 @@ internal static class PsarcConverter
             allVariantParts);
 
         Console.WriteLine($"[PsarcImporter] Successfully imported '{title}' -> {outputPath}");
+
+        return (title, artist);
     }
 
     private static void BuildTheoryPackage(
