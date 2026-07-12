@@ -4,6 +4,58 @@
         x:Class="PsarcImporter.Gui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="PSARC Importer"
-        Width="600" Height="450"
+        Width="650" Height="500"
         WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto,Auto">
+
+        <!-- Source folder -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+            <TextBlock Grid.Column="0" Text="Source Folder:" VerticalAlignment="Center" Width="110" />
+            <TextBox Grid.Column="1" Text="{Binding SourcePath}" Watermark="Path to folder containing .psarc files"
+                     IsReadOnly="True" Margin="8,0" />
+            <Button Grid.Column="2" Content="Browse" Command="{Binding BrowseSourceCommand}" Width="80" />
+        </Grid>
+
+        <!-- Output folder -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+            <TextBlock Grid.Column="0" Text="Output Folder:" VerticalAlignment="Center" Width="110" />
+            <TextBox Grid.Column="1" Text="{Binding OutputPath}" Watermark="Path to output .theory files"
+                     IsReadOnly="True" Margin="8,0" />
+            <Button Grid.Column="2" Content="Browse" Command="{Binding BrowseOutputCommand}" Width="80" />
+        </Grid>
+
+        <!-- File list -->
+        <Border Grid.Row="2" BorderBrush="#40FFFFFF" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
+            <Grid RowDefinitions="Auto,*">
+                <TextBlock Grid.Row="0" Text="Files to convert" FontWeight="SemiBold" Margin="8,6" />
+                <ListBox Grid.Row="1" ItemsSource="{Binding Files}" Margin="4"
+                         MaxHeight="250">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PsarcFileItem">
+                            <CheckBox Content="{Binding FileName}" IsChecked="{Binding IsSelected}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- Select all / Deselect all -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,8">
+            <Button Content="Select All" Command="{Binding SelectAllCommand}" Width="90" Margin="0,0,8,0" />
+            <Button Content="Deselect All" Command="{Binding DeselectAllCommand}" Width="90" />
+        </StackPanel>
+
+        <!-- Convert button + progress -->
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Content="Convert" Command="{Binding ConvertCommand}"
+                    Width="100" Height="32" FontWeight="SemiBold"
+                    IsEnabled="{Binding CanConvert}" />
+            <ProgressBar Grid.Column="1" Value="{Binding Progress}" Maximum="{Binding ProgressMax}"
+                         Margin="12,0" Height="20" />
+            <TextBlock Grid.Column="2" Text="{Binding StatusMessage}" VerticalAlignment="Center"
+                       MaxWidth="200" TextTrimming="CharacterEllipsis" />
+        </Grid>
+
+    </Grid>
 </Window>
