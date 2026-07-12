@@ -8,7 +8,7 @@ A standalone add-on for [The String Theory](https://github.com/AnthonySf/TheStri
 - Cross-platform GUI (Avalonia) with folder pickers and progress display
 - CLI for automation and integration with The String Theory
 - Automatic output naming from song metadata (`{Artist} - {Title}.theory`)
-- Skip existing files in batch mode
+- Skip existing files and detect duplicates by metadata in batch mode
 
 ## Prerequisites
 
@@ -87,8 +87,11 @@ Output filenames are derived from song metadata (`{Artist} - {Title}.theory`). E
 | `--source {path}` | Path to `.psarc` file or directory containing `.psarc` files (required) |
 | `--output {path}` | Path to write `.theory` package, or output directory in batch mode (required) |
 | `--work {path}` | Temporary working directory (optional, defaults to `%TEMP%\PsarcImporter_<GUID>`) |
+| `--force` | Skip metadata duplicate detection in batch mode (optional) |
 
 Exit codes: `0` on success, `1` on failure, `2` for invalid arguments.
+
+**Batch mode** automatically detects duplicate songs by reading `manifest.json` from existing `.theory` files in the output directory. Songs with matching title and artist are skipped. Use `--force` to bypass this check and re-import duplicates. Failed files are listed by name with error messages after the batch summary.
 
 ## GUI
 
