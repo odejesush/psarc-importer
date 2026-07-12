@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
@@ -131,5 +133,158 @@ public class BatchProcessingTests
             try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
             catch { }
         }
+    }
+
+    [Fact]
+    public void GetSongKey_ReturnsTitleAndArtist()
+    {
+        string key = Program.GetSongKey("My Song", "My Artist");
+        key.Should().Be("My Song|My Artist");
+    }
+
+    [Fact]
+    public void GetSongKey_TrimsWhitespace()
+    {
+        string key = Program.GetSongKey("  Song  ", "  Artist  ");
+        key.Should().Be("Song|Artist");
+    }
+
+    [Fact]
+    public void LoadExistingSongMetadata_EmptyDirectory_ReturnsEmptySet()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"batch_meta_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            var songs = Program.LoadExistingSongMetadata(outputDir);
+            songs.Should().BeEmpty();
+        }
+        finally
+        {
+            try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void LoadExistingSongMetadata_WithValidTheoryFile_ContainsMetadata()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"batch_meta_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            CreateTestTheoryFile(Path.Combine(outputDir, "TestArtist - TestSong.theory"), "TestSong", "TestArtist");
+
+            var songs = Program.LoadExistingSongMetadata(outputDir);
+
+            songs.Should().Contain("TestSong|TestArtist");
+        }
+        finally
+        {
+            try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void LoadExistingSongMetadata_WithMultipleTheoryFiles_ContainsAllMetadata()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"batch_meta_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            CreateTestTheoryFile(Path.Combine(outputDir, "A - Song1.theory"), "Song1", "A");
+            CreateTestTheoryFile(Path.Combine(outputDir, "B - Song2.theory"), "Song2", "B");
+
+            var songs = Program.LoadExistingSongMetadata(outputDir);
+
+            songs.Should().HaveCount(2);
+            songs.Should().Contain("Song1|A");
+            songs.Should().Contain("Song2|B");
+        }
+        finally
+        {
+            try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void LoadExistingSongMetadata_WithCorruptFile_SkipsGracefully()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"batch_meta_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            File.WriteAllText(Path.Combine(outputDir, "corrupt.theory"), "not a zip file");
+            CreateTestTheoryFile(Path.Combine(outputDir, "valid.theory"), "ValidSong", "ValidArtist");
+
+            var songs = Program.LoadExistingSongMetadata(outputDir);
+
+            songs.Should().HaveCount(1);
+            songs.Should().Contain("ValidSong|ValidArtist");
+        }
+        finally
+        {
+            try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void LoadExistingSongMetadata_WithNoManifest_SkipsGracefully()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"batch_meta_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            string theoryPath = Path.Combine(outputDir, "no_manifest.theory");
+            using (var stream = File.Create(theoryPath))
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
+            {
+                archive.CreateEntry("dummy.txt");
+            }
+
+            var songs = Program.LoadExistingSongMetadata(outputDir);
+
+            songs.Should().BeEmpty();
+        }
+        finally
+        {
+            try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void LoadExistingSongMetadata_IgnoresNonTheoryFiles()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"batch_meta_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            File.WriteAllText(Path.Combine(outputDir, "readme.txt"), "not a theory file");
+            CreateTestTheoryFile(Path.Combine(outputDir, "valid.theory"), "Song", "Artist");
+
+            var songs = Program.LoadExistingSongMetadata(outputDir);
+
+            songs.Should().HaveCount(1);
+            songs.Should().Contain("Song|Artist");
+        }
+        finally
+        {
+            try { if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true); }
+            catch { }
+        }
+    }
+
+    private static void CreateTestTheoryFile(string path, string title, string artist)
+    {
+        using var stream = File.Create(path);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+        var entry = archive.CreateEntry("manifest.json");
+        using var entryStream = entry.Open();
+        var manifest = new { title, artist };
+        JsonSerializer.Serialize(entryStream, manifest);
     }
 }

@@ -169,7 +169,7 @@ internal static class Program
         return failed > 0 ? 1 : 0;
     }
 
-    private static HashSet<string> LoadExistingSongMetadata(string outputDir)
+    internal static HashSet<string> LoadExistingSongMetadata(string outputDir)
     {
         var songs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         string[] theoryFiles = Directory.GetFiles(outputDir, "*.theory", SearchOption.TopDirectoryOnly);
@@ -199,7 +199,7 @@ internal static class Program
         return songs;
     }
 
-    private static string GetSongKey(string title, string artist)
+    internal static string GetSongKey(string title, string artist)
     {
         return $"{title.Trim()}|{artist.Trim()}";
     }
