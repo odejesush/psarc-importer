@@ -65,6 +65,8 @@ internal static class Program
 
     private static async Task<int> RunBatch(string sourceDir, string outputDir, string? workDirectory)
     {
+        Directory.CreateDirectory(outputDir);
+
         string[] psarcFiles = Directory.GetFiles(sourceDir, "*.psarc", SearchOption.TopDirectoryOnly);
 
         if (psarcFiles.Length == 0)
@@ -72,8 +74,6 @@ internal static class Program
             Console.Error.WriteLine($"[PsarcImporter] No .psarc files found in {sourceDir}");
             return 1;
         }
-
-        Directory.CreateDirectory(outputDir);
 
         if (string.IsNullOrWhiteSpace(workDirectory))
             workDirectory = Path.Combine(Path.GetTempPath(), $"PsarcImporter_{Guid.NewGuid():N}");
