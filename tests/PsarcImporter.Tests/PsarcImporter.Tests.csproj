@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PsarcImporter\PsarcImporter.csproj" />
+    <ProjectReference Include="..\..\src\PsarcImporter.Gui\PsarcImporter.Gui.csproj" />
     <ProjectReference Include="..\..\lib\Rocksmith2014.NET\src\Rocksmith2014.XML\Rocksmith2014.XML.csproj" />
   </ItemGroup>
 
