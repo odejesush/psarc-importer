@@ -145,6 +145,39 @@ public class ProcessingTests : IDisposable
     }
 
     [Fact]
+    public void BuildTheoryPackage_WritesRawToneJsonAsEntry()
+    {
+        string outputPath = Path.Combine(_workDir, "tones.theory");
+        const string toneJson = "{\"GearList\":{}}";
+        TheoryArrangementData Arrangement(string id) => new()
+        {
+            arrangementId = id,
+            tones = new TheoryToneData { definitions = { new TheoryToneDefinitionData { name = "Clean", rawToneJson = toneJson } } }
+        };
+
+        TheoryPackageWriter.Write(
+            outputPath,
+            new TheorySongManifest(),
+            new List<TheoryArrangementData> { Arrangement("bass__1"), Arrangement("bass__1__level-000") },
+            primaryAudioPath: null,
+            previewAudioPath: null,
+            coverArtPath: null,
+            new CachedSongManifest(),
+            audioEntryDir: "audio");
+
+        using ZipArchive archive = ZipFile.OpenRead(outputPath);
+        archive.Entries.Count(e => e.FullName.StartsWith("tones/")).Should().Be(1, "identical tones are shared across levels");
+        foreach (string id in new[] { "bass__1", "bass__1__level-000" })
+        {
+            using StreamReader arrangementReader = new(archive.GetEntry($"arrangements/{id}.json")!.Open());
+            string rawToneEntry = JsonDocument.Parse(arrangementReader.ReadToEnd()).RootElement
+                .GetProperty("tones").GetProperty("definitions")[0].GetProperty("rawToneEntry").GetString()!;
+            using StreamReader toneReader = new(archive.GetEntry(rawToneEntry)!.Open());
+            toneReader.ReadToEnd().Should().Be(toneJson);
+        }
+    }
+
+    [Fact]
     public void BuildTheoryPackage_ManifestStructure()
     {
         string outputPath = Path.Combine(_workDir, "test.theory");

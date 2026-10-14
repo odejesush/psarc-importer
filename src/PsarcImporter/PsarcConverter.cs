@@ -262,7 +262,7 @@ internal static class PsarcConverter
             {
                 name = td.name,
                 key = td.key,
-                rawToneEntry = td.rawJson
+                rawToneJson = td.rawJson
             }).ToList();
 
             // Build arrangement

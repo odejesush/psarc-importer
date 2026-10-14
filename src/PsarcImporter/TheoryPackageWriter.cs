@@ -36,9 +36,28 @@ internal static class TheoryPackageWriter
             sw.Write(manifestJson);
         }
 
-        // Write arrangements
+        // Write raw tone JSON as entries (shared across difficulty levels), then arrangements
+        Dictionary<string, string> toneEntriesByJson = new(StringComparer.Ordinal);
         foreach (TheoryArrangementData arrangement in arrangements)
         {
+            foreach (TheoryToneDefinitionData definition in arrangement.tones?.definitions ?? new())
+            {
+                if (string.IsNullOrWhiteSpace(definition.rawToneJson))
+                    continue;
+
+                if (!toneEntriesByJson.TryGetValue(definition.rawToneJson, out string? toneEntry))
+                {
+                    toneEntry = $"tones/tone-{toneEntriesByJson.Count:D3}.json";
+                    toneEntriesByJson[definition.rawToneJson] = toneEntry;
+                    ZipArchiveEntry entry = archive.CreateEntry(toneEntry, CompressionLevel.Optimal);
+                    using Stream writer = entry.Open();
+                    using StreamWriter sw = new(writer);
+                    sw.Write(definition.rawToneJson);
+                }
+
+                definition.rawToneEntry = toneEntry;
+            }
+
             string entryName = $"arrangements/{SanitizeEntryName(arrangement.arrangementId)}.json";
             string arrangementJson = JsonSerializer.Serialize(arrangement, JsonOptions);
             ZipArchiveEntry arrEntry = archive.CreateEntry(entryName, CompressionLevel.Optimal);
@@ -237,6 +256,9 @@ internal sealed class TheoryToneDefinitionData
     public string name { get; set; } = string.Empty;
     public string key { get; set; } = string.Empty;
     public string rawToneEntry { get; set; } = string.Empty;
+    // Raw RS tone JSON; the writer stores it as a package entry and points rawToneEntry at it.
+    [JsonIgnore]
+    public string rawToneJson { get; set; } = string.Empty;
     public string preferredPresetName { get; set; } = string.Empty;
     public string fallbackSearchText { get; set; } = string.Empty;
     public TheoryTonePresetData preset { get; set; } = new();
