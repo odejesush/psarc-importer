@@ -48,8 +48,8 @@ internal static class PsarcConverter
         List<CachedToneDefinitionData> projectToneDefinitions =
             ToneExtractor.ExtractProjectToneDefinitions(importResult.ProjectPath);
 
-        // Process each arrangement: load, fix, build variants, collect parts
-        var allVariantParts = new List<(ArrangementVariantBuildResult Variant, ArrangementContext Context)>();
+        // Process each arrangement: load, fix, collect contexts
+        var contexts = new List<ArrangementContext>();
         HashSet<string> toneDefinitionKeys = new(StringComparer.OrdinalIgnoreCase);
         InstrumentalArrangement? firstArrangement = null;
 
@@ -64,11 +64,10 @@ internal static class PsarcConverter
             context.Tones = ToneExtractor.ExtractArrangementTones(
                 manifestJsonPaths, xmlPath, context.Route, projectToneDefinitions);
             ToneExtractor.AddToneDefinitionKeys(context.Tones.definitions, toneDefinitionKeys);
-
-            List<ArrangementVariantBuildResult> variants = ArrangementBuilder.BuildVariants(context);
-            foreach (var variant in variants)
-                allVariantParts.Add((variant, context));
+            contexts.Add(context);
         }
+
+        var allVariantParts = BuildVariantParts(contexts);
 
         // Build the theory output
         string title = firstArrangement?.MetaData?.Title ?? Path.GetFileNameWithoutExtension(psarcPath);
@@ -96,7 +95,30 @@ internal static class PsarcConverter
         return (title, artist);
     }
 
-    private static void BuildTheoryPackage(
+    internal static List<(ArrangementVariantBuildResult Variant, ArrangementContext Context)> BuildVariantParts(List<ArrangementContext> contexts)
+    {
+        // Bonus/alternate arrangements reuse the main one's route and part number; suffix them so ids and entry names stay unique.
+        HashSet<ArrangementContext> alternates = new();
+        foreach (var group in contexts.GroupBy(context => context.PartId).Where(group => group.Count() > 1))
+        {
+            int alt = 0;
+            foreach (ArrangementContext context in group.OrderByDescending(c => c.Arrangement.MetaData.ArrangementProperties.Represent).Skip(1))
+            {
+                alt++;
+                context.PartId = $"{context.PartId}::alt-{alt}";
+                context.DisplayName = alt == 1 ? $"{context.DisplayName} (Alt)" : $"{context.DisplayName} (Alt {alt})";
+                alternates.Add(context);
+            }
+        }
+
+        // Alternates go last so the default (first) arrangement stays a main one.
+        return contexts
+            .OrderBy(alternates.Contains)
+            .SelectMany(context => ArrangementBuilder.BuildVariants(context).Select(variant => (variant, context)))
+            .ToList();
+    }
+
+    internal static void BuildTheoryPackage(
         string outputPath,
         string title,
         string artist,

@@ -145,6 +145,35 @@ public class ProcessingTests : IDisposable
     }
 
     [Fact]
+    public void BuildTheoryPackage_BonusArrangementWithSamePartGetsUniqueEntries()
+    {
+        string bassXml = GetFixturePath("arr_bass_RS2.xml");
+        if (!File.Exists(bassXml))
+            return;
+
+        // Rocksmith bonus arrangements share route and part number with the main one (arr_bass2 next to arr_bass).
+        InstrumentalArrangement bonus = InstrumentalArrangement.Load(bassXml);
+        bonus.MetaData.ArrangementProperties.Represent = false;
+        InstrumentalArrangement main = InstrumentalArrangement.Load(bassXml);
+        main.MetaData.ArrangementProperties.Represent = true;
+        var contexts = new List<ArrangementContext> { ArrangementContext.From(bonus, bassXml, 0), ArrangementContext.From(main, bassXml, 1) };
+        string outputPath = Path.Combine(_workDir, "bonus.theory");
+
+        PsarcConverter.BuildTheoryPackage(outputPath, "Song", "Artist", "Album", null, null, null, bassXml, PsarcConverter.BuildVariantParts(contexts));
+
+        contexts[1].PartId.Should().Be("bass::1", "the main arrangement keeps its id so saved progress still matches");
+        using ZipArchive archive = ZipFile.OpenRead(outputPath);
+        archive.Entries.Select(e => e.FullName).Should().OnlyHaveUniqueItems();
+        using Stream stream = archive.GetEntry("manifest.json")!.Open();
+        using JsonDocument manifest = JsonDocument.Parse(stream);
+        List<JsonElement> summaries = manifest.RootElement.GetProperty("arrangements").EnumerateArray().ToList();
+        List<string?> ids = summaries.Select(s => s.GetProperty("arrangementId").GetString()).ToList();
+        ids.Should().OnlyHaveUniqueItems().And.Contain(new[] { "bass::1", "bass::1::alt-1" });
+        manifest.RootElement.GetProperty("defaultArrangementId").GetString().Should().Be("bass::1", "the bonus file sorts first but must not become the default");
+        summaries.Should().OnlyContain(s => archive.GetEntry(s.GetProperty("entry").GetString()!) != null);
+    }
+
+    [Fact]
     public void BuildTheoryPackage_ManifestStructure()
     {
         string outputPath = Path.Combine(_workDir, "test.theory");
